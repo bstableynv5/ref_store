@@ -23,7 +23,7 @@ def file_generator(root: Path) -> Generator[bytes, None, None]:
         yield from buffers
 
 
-def hash_all(buffers: Iterable[Union[bytes, bytearray, memoryview]]) -> str:
+def hash_all(buffers: Iterable[Union[bytes, bytearray, memoryview]]) -> tuple[str, int]:
     """Creates a single hex digest from all the binary information.
 
     Args:
@@ -33,10 +33,12 @@ def hash_all(buffers: Iterable[Union[bytes, bytearray, memoryview]]) -> str:
     Returns:
         str: The complete hash as a string of hexidecimal digits.
     """
+    count = 0
     hasher = hashlib.md5(usedforsecurity=False)
     for buffer in buffers:
+        count += 1
         hasher.update(buffer)
-    return hasher.hexdigest()
+    return hasher.hexdigest(), count
 
 
 def for_directory(root: Union[Path, str], github_url: Union[Path, str]) -> str:
@@ -55,13 +57,14 @@ def for_directory(root: Union[Path, str], github_url: Union[Path, str]) -> str:
     github_url = Path(github_url)
     name = github_url.stem
 
-    hash = hash_all(file_generator(root))
+    hash, file_count = hash_all(file_generator(root))
     contents = json.dumps(
         {
             "name": name,
             "repo": str(github_url),
             "date": datetime.now().astimezone(timezone.utc).isoformat(),
             "hash": hash,
+            "files": file_count,
         },
         indent=2,
     )
